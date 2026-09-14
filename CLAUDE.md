@@ -59,6 +59,12 @@ Re-uploading a CSV **upserts** rather than duplicates: `Asset`/`Vulnerability` a
 
 Generated via `bin/rails generate authentication` (Rails 8 built-in, not Devise). `Authentication` concern in `ApplicationController` requires login on every action by default; use `allow_unauthenticated_access` in a controller to opt out. `Current.user` / `Current.session` (via `app/models/current.rb`) is how controllers/views access the logged-in user — there is no `current_user` helper.
 
+The login field is `email_address` (not a real username field) but has no format validation, so the seeded default account (`db/seeds.rb`, run via `bin/rails db:seed`) logs in as `itadmin` / `itadmin`. Seeding is idempotent (`find_or_create_by!`) so it's safe to run on every deploy — it will never overwrite a password the admin has since changed.
+
+There are two separate password-change paths, don't conflate them:
+- `PasswordsController` (`/passwords`) — the *forgot password* flow: emails a signed reset token via `PasswordsMailer`. Requires working mail delivery to be useful.
+- `PasswordSettingsController` (`/password_setting`) — a self-service *change password while logged in* page (current password + new password, no email involved). This is what the seeded `itadmin` account is expected to use, since its "email" isn't deliverable.
+
 ### Gemfile pins worth knowing about
 
 - `json` is pinned to `2.13.2`. The `json` gem's newer major line (3.x, which Bundler resolves to by default) changed `JSON.parse`'s arity and breaks `ActiveSupport::Messages::Metadata` (used for signed cookies/sessions) on this Rails version — every authenticated request 500s otherwise. Don't let `bundle update` drift this off 2.x without retesting login.
