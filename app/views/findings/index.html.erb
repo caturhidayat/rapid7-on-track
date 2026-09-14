@@ -1,0 +1,36 @@
+<h1 class="text-2xl font-bold mb-4">Findings</h1>
+
+<div class="flex gap-3 mb-4 text-sm">
+  <%= link_to "All", root_path, class: "px-3 py-1 rounded border #{'bg-gray-900 text-white' unless params[:severity] || params[:past_due]}" %>
+  <% Vulnerability::SEVERITIES.each do |severity| %>
+    <%= link_to severity, root_path(severity: severity), class: "px-3 py-1 rounded border #{'bg-gray-900 text-white' if params[:severity] == severity}" %>
+  <% end %>
+  <%= link_to "Past due", root_path(past_due: true), class: "px-3 py-1 rounded border #{'bg-gray-900 text-white' if params[:past_due] == 'true'}" %>
+</div>
+
+<div class="overflow-x-auto">
+  <table class="min-w-full text-sm bg-white shadow rounded">
+    <thead class="bg-gray-100 text-left">
+      <tr>
+        <th class="px-4 py-2">Asset</th>
+        <th class="px-4 py-2">Vulnerability</th>
+        <th class="px-4 py-2">Severity</th>
+        <th class="px-4 py-2">CVSS</th>
+        <th class="px-4 py-2">Due date</th>
+        <th class="px-4 py-2">Past due</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @findings.each do |finding| %>
+        <tr class="border-t">
+          <td class="px-4 py-2"><%= link_to finding.asset.hostname, asset_path(finding.asset) %></td>
+          <td class="px-4 py-2"><%= link_to finding.vulnerability.title, vulnerability_path(finding.vulnerability) %></td>
+          <td class="px-4 py-2"><%= finding.vulnerability.severity %></td>
+          <td class="px-4 py-2"><%= finding.vulnerability.cvss_score %></td>
+          <td class="px-4 py-2"><%= finding.due_date&.to_date %></td>
+          <td class="px-4 py-2"><%= finding.past_due ? "Yes" : "No" %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

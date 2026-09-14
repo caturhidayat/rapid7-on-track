@@ -1,0 +1,26 @@
+<h1 class="text-2xl font-bold mb-1"><%= @vulnerability.title %></h1>
+<p class="text-gray-600 mb-4">
+  <%= @vulnerability.severity %> &middot; CVSS <%= @vulnerability.cvss_score %>
+  <% if @vulnerability.has_exploits? %> &middot; <span class="text-red-600 font-semibold">Has exploits</span><% end %>
+</p>
+
+<div class="overflow-x-auto">
+  <table class="min-w-full text-sm bg-white shadow rounded">
+    <thead class="bg-gray-100 text-left">
+      <tr>
+        <th class="px-4 py-2">Asset</th>
+        <th class="px-4 py-2">Due date</th>
+        <th class="px-4 py-2">Past due</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @findings.each do |finding| %>
+        <tr class="border-t">
+          <td class="px-4 py-2"><%= link_to finding.asset.hostname, asset_path(finding.asset) %></td>
+          <td class="px-4 py-2"><%= finding.due_date&.to_date %></td>
+          <td class="px-4 py-2"><%= finding.past_due ? "Yes" : "No" %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

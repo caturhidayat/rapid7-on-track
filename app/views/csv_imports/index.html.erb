@@ -1,0 +1,31 @@
+<h1 class="text-2xl font-bold mb-4">CSV Imports</h1>
+
+<%= form_with url: csv_imports_path, method: :post, multipart: true, class: "mb-6 flex items-center gap-3" do |f| %>
+  <%= f.file_field :file, accept: ".csv", class: "text-sm" %>
+  <%= f.submit "Upload", class: "bg-gray-900 text-white px-4 py-2 rounded text-sm cursor-pointer" %>
+<% end %>
+
+<div class="overflow-x-auto">
+  <table class="min-w-full text-sm bg-white shadow rounded">
+    <thead class="bg-gray-100 text-left">
+      <tr>
+        <th class="px-4 py-2">Filename</th>
+        <th class="px-4 py-2">Uploaded by</th>
+        <th class="px-4 py-2">Status</th>
+        <th class="px-4 py-2">Rows</th>
+        <th class="px-4 py-2">Uploaded at</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @csv_imports.each do |csv_import| %>
+        <tr class="border-t">
+          <td class="px-4 py-2"><%= csv_import.filename %></td>
+          <td class="px-4 py-2"><%= csv_import.user.email_address %></td>
+          <td class="px-4 py-2"><%= csv_import.status %></td>
+          <td class="px-4 py-2"><%= csv_import.rows_count %></td>
+          <td class="px-4 py-2"><%= csv_import.created_at.to_fs(:long) %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
