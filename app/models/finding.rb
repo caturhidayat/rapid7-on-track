@@ -5,6 +5,7 @@ class Finding < ApplicationRecord
 
   validates :vulnerability_id, uniqueness: { scope: :asset_id }
 
+  enum :status, { open: "open", closed: "closed" }, default: "open", validate: true
+
   scope :past_due, -> { where(past_due: true) }
-  scope :open, -> { where(past_due: false) }
 end

@@ -36,20 +36,26 @@ Rapid7's CSV export is one row per (asset, vulnerability) pairing, repeated acro
 
 - **`Asset`** — one row per physical/virtual host, keyed on `asset_uid` (Rapid7's `Asset Unique Identifier`, stable across scans). Holds host-level fields: hostname, IP, OS fields, risk score, malware/PCI flags.
 - **`Vulnerability`** — the vulnerability catalog, keyed on `vulnerability_uid` (Rapid7's `Vulnerability Unique Identifier`, e.g. `google-chrome-cve-2026-2441`). Holds CVE/CVSS metadata that doesn't vary per-asset: title, severity, CVSS vector components, exploit info.
-- **`Finding`** — the join between an `Asset` and a `Vulnerability` (unique on `[asset_id, vulnerability_id]`), holding the scan-instance data that *does* vary: due date, past-due flag, first/last found dates, grace period, discovery date. Each `Finding` also belongs to the `CsvImport` that most recently touched it.
+- **`Finding`** — the join between an `Asset` and a `Vulnerability` (unique on `[asset_id, vulnerability_id]`), holding the scan-instance data that *does* vary: due date, past-due flag, first/last found dates, grace period, discovery date, and a `status` (`open`/`closed`, see below). Each `Finding` also belongs to the `CsvImport` that most recently touched it.
 - **`CsvImport`** — an audit record of each upload: uploading user, filename, row count, status (`pending`/`processing`/`completed`/`failed`), error message.
 
-Re-uploading a CSV **upserts** rather than duplicates: `Asset`/`Vulnerability` are looked up by their Rapid7 UID and updated in place, and `Finding` is looked up by `[asset, vulnerability]` and updated in place. There is currently no reconciliation for findings that disappear from a new export (e.g. a remediated vuln no longer present in the CSV) — they remain in the DB pointing at the last `CsvImport` that saw them.
+Re-uploading a CSV **upserts** rather than duplicates: `Asset`/`Vulnerability` are looked up by their Rapid7 UID and updated in place, and `Finding` is looked up by `[asset, vulnerability]` and updated in place.
 
-### Import pipeline
+### Import pipeline & open/close reconciliation
 
-`app/services/rapid7_csv_importer.rb` (`Rapid7CsvImporter`) is the single entry point for turning an uploaded file into rows. It:
+`app/services/rapid7_csv_importer.rb` (`Rapid7CsvImporter`) is the single entry point for turning an uploaded file into rows. Each Rapid7 export is a **full current snapshot** of what's vulnerable, so every import reconciles `Finding.status` against what's in the file, not just upserts:
 1. Creates a `CsvImport` record up front (status `processing`).
-2. Streams the file with `CSV.foreach(..., headers: true)`, matching Rapid7's exact column names (see the header comment mapping in that file — column names are the contract, not positions).
-3. Wraps the whole file in one DB transaction; if any row errors, the entire import rolls back and `CsvImport` is marked `failed` with collected error messages.
-4. On success, marks `CsvImport` `completed` with the row count.
+2. Streams the file with `CSV.foreach(..., headers: true)`, matching Rapid7's exact column names (see the header comment mapping in that file — column names are the contract, not positions). Every `[asset, vulnerability]` pairing seen is upserted with `status: "open"` (reopening it with `closed_at: nil` if it had previously been closed) and its `id` is collected into `seen_finding_ids`.
+3. After the file is fully read (and only if no row errored), any `Finding` that's still `status: "open"` but *wasn't* in `seen_finding_ids` is bulk-closed (`status: "closed"`, `closed_at: Time.current`) — it dropped out of Rapid7's report, meaning it's been remediated.
+4. The whole thing (steps 2–3) runs in one DB transaction; if any row errored, everything rolls back and `CsvImport` is marked `failed` with collected error messages. Otherwise `CsvImport` is marked `completed`.
 
 `CsvImportsController#create` is the only caller today (a synchronous multipart upload — no background job). If imports need to handle large files, that's the seam to move to Solid Queue (already installed).
+
+### Sorting
+
+`app/controllers/concerns/sortable.rb` (`Sortable`) is a shared concern for click-to-sort table headers, included in `FindingsController`, `AssetsController`, and `VulnerabilitiesController`. Each including controller defines a `SORTABLE_COLUMNS` hash (public sort key → whitelisted SQL column/expression), plus `DEFAULT_SORT_COLUMN`/`DEFAULT_SORT_DIRECTION`. The `sort`/`direction` query params drive it; `ApplicationHelper#sortable_header(title, column)` renders the linked header (toggling direction, showing an arrow, and preserving other filter query params via `request.query_parameters`). `VulnerabilitiesController` sorts by `findings_count` — a `COUNT(findings.id)` computed via `left_joins(:findings).select(...).group("vulnerabilities.id")`, safe in Postgres because grouping by the primary key makes the rest of `vulnerabilities.*` functionally dependent.
+
+`config/brakeman.ignore` has one documented false-positive suppression for `Sortable#sort_order`'s `Arel.sql` interpolation — the interpolated values only ever come from the whitelisted `SORTABLE_COLUMNS` constant and a strict `asc`/`desc` ternary, never raw params.
 
 ### Routing note
 

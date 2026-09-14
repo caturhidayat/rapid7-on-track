@@ -1,11 +1,20 @@
 require "csv"
 
 # Imports a Rapid7 InsightVM "vulnerability instance" CSV export.
+#
 # Each row describes one (asset, vulnerability) pairing; assets and
 # vulnerabilities are upserted into their own catalogs, and a Finding
 # row ties them together for this import.
+#
+# Every export is a full snapshot of what Rapid7 currently sees as
+# vulnerable, keyed by "Asset Unique Identifier" + "Vulnerability Unique
+# Identifier". So on each import:
+#   - a pairing present in the CSV but not yet in our DB is a new finding (opened)
+#   - a pairing present in both is still outstanding (metadata refreshed, reopened if it had been closed)
+#   - a pairing that was open in our DB but absent from the CSV has been
+#     remediated since the last export, and is closed
 class Rapid7CsvImporter
-  Result = Struct.new(:csv_import, :rows_processed, :errors, keyword_init: true)
+  Result = Struct.new(:csv_import, :rows_processed, :closed_count, :errors, keyword_init: true)
 
   def initialize(file, user:)
     @file = file
@@ -15,17 +24,24 @@ class Rapid7CsvImporter
   def call
     csv_import = CsvImport.create!(user: @user, filename: original_filename, status: :processing)
     rows_processed = 0
+    closed_count = 0
     errors = []
+    seen_finding_ids = []
 
     ActiveRecord::Base.transaction do
       CSV.foreach(@file.path, headers: true) do |row|
-        import_row(row, csv_import)
+        seen_finding_ids << import_row(row, csv_import).id
         rows_processed += 1
       rescue => e
         errors << "Row #{rows_processed + 1}: #{e.message}"
       end
 
-      raise ActiveRecord::Rollback if errors.any?
+      if errors.empty?
+        closed_count = Finding.open.where.not(id: seen_finding_ids)
+          .update_all(status: "closed", closed_at: Time.current)
+      else
+        raise ActiveRecord::Rollback
+      end
     end
 
     csv_import.update!(
@@ -34,7 +50,7 @@ class Rapid7CsvImporter
       error_message: errors.any? ? errors.join("\n") : nil
     )
 
-    Result.new(csv_import: csv_import, rows_processed: rows_processed, errors: errors)
+    Result.new(csv_import: csv_import, rows_processed: rows_processed, closed_count: closed_count, errors: errors)
   end
 
   private
@@ -50,6 +66,8 @@ class Rapid7CsvImporter
     finding = Finding.find_or_initialize_by(asset: asset, vulnerability: vulnerability)
     finding.assign_attributes(
       csv_import: csv_import,
+      status: "open",
+      closed_at: nil,
       instance_count: row["Vulnerability Instance Count"],
       in_grace_period: to_bool(row["In Grace Period"]),
       has_malware: to_bool(row["Has Malware"]),
@@ -62,6 +80,7 @@ class Rapid7CsvImporter
       reintroduced: row["Reintroduced"]
     )
     finding.save!
+    finding
   end
 
   def upsert_asset(row)

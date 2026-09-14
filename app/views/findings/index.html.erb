@@ -1,23 +1,30 @@
 <h1 class="text-2xl font-bold mb-4">Findings</h1>
 
-<div class="flex gap-3 mb-4 text-sm">
-  <%= link_to "All", root_path, class: "px-3 py-1 rounded border #{'bg-gray-900 text-white' unless params[:severity] || params[:past_due]}" %>
+<div class="flex flex-wrap gap-3 mb-2 text-sm">
+  <%= link_to "Open", root_path(severity: params[:severity], past_due: params[:past_due]), class: "px-3 py-1 rounded border #{'bg-gray-900 text-white' unless %w[closed all].include?(params[:status])}" %>
+  <%= link_to "Closed", root_path(status: "closed", severity: params[:severity], past_due: params[:past_due]), class: "px-3 py-1 rounded border #{'bg-gray-900 text-white' if params[:status] == 'closed'}" %>
+  <%= link_to "All", root_path(status: "all", severity: params[:severity], past_due: params[:past_due]), class: "px-3 py-1 rounded border #{'bg-gray-900 text-white' if params[:status] == 'all'}" %>
+</div>
+
+<div class="flex flex-wrap gap-3 mb-4 text-sm">
+  <%= link_to "All severities", root_path(status: params[:status]), class: "px-3 py-1 rounded border #{'bg-gray-900 text-white' unless params[:severity]}" %>
   <% Vulnerability::SEVERITIES.each do |severity| %>
-    <%= link_to severity, root_path(severity: severity), class: "px-3 py-1 rounded border #{'bg-gray-900 text-white' if params[:severity] == severity}" %>
+    <%= link_to severity, root_path(status: params[:status], severity: severity), class: "px-3 py-1 rounded border #{'bg-gray-900 text-white' if params[:severity] == severity}" %>
   <% end %>
-  <%= link_to "Past due", root_path(past_due: true), class: "px-3 py-1 rounded border #{'bg-gray-900 text-white' if params[:past_due] == 'true'}" %>
+  <%= link_to "Past due", root_path(status: params[:status], severity: params[:severity], past_due: true), class: "px-3 py-1 rounded border #{'bg-gray-900 text-white' if params[:past_due] == 'true'}" %>
 </div>
 
 <div class="overflow-x-auto">
   <table class="min-w-full text-sm bg-white shadow rounded">
     <thead class="bg-gray-100 text-left">
       <tr>
-        <th class="px-4 py-2">Asset</th>
-        <th class="px-4 py-2">Vulnerability</th>
-        <th class="px-4 py-2">Severity</th>
-        <th class="px-4 py-2">CVSS</th>
-        <th class="px-4 py-2">Due date</th>
-        <th class="px-4 py-2">Past due</th>
+        <th class="px-4 py-2"><%= sortable_header "Asset", "asset" %></th>
+        <th class="px-4 py-2"><%= sortable_header "Vulnerability", "vulnerability" %></th>
+        <th class="px-4 py-2"><%= sortable_header "Severity", "severity" %></th>
+        <th class="px-4 py-2"><%= sortable_header "CVSS", "cvss" %></th>
+        <th class="px-4 py-2"><%= sortable_header "Due date", "due_date" %></th>
+        <th class="px-4 py-2"><%= sortable_header "Past due", "past_due" %></th>
+        <th class="px-4 py-2"><%= sortable_header "Status", "status" %></th>
       </tr>
     </thead>
     <tbody>
@@ -29,6 +36,7 @@
           <td class="px-4 py-2"><%= finding.vulnerability.cvss_score %></td>
           <td class="px-4 py-2"><%= finding.due_date&.to_date %></td>
           <td class="px-4 py-2"><%= finding.past_due ? "Yes" : "No" %></td>
+          <td class="px-4 py-2"><%= render "findings/status_badge", finding: finding %></td>
         </tr>
       <% end %>
     </tbody>

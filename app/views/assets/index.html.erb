@@ -4,13 +4,13 @@
   <table class="min-w-full text-sm bg-white shadow rounded">
     <thead class="bg-gray-100 text-left">
       <tr>
-        <th class="px-4 py-2">Hostname</th>
-        <th class="px-4 py-2">IP address</th>
-        <th class="px-4 py-2">Operating system</th>
-        <th class="px-4 py-2">Risk score</th>
-        <th class="px-4 py-2">Critical</th>
-        <th class="px-4 py-2">Severe</th>
-        <th class="px-4 py-2">Moderate</th>
+        <th class="px-4 py-2"><%= sortable_header "Hostname", "hostname" %></th>
+        <th class="px-4 py-2"><%= sortable_header "IP address", "ip_address" %></th>
+        <th class="px-4 py-2"><%= sortable_header "Operating system", "operating_system" %></th>
+        <th class="px-4 py-2"><%= sortable_header "Risk score", "risk_score" %></th>
+        <th class="px-4 py-2"><%= sortable_header "Critical", "critical" %></th>
+        <th class="px-4 py-2"><%= sortable_header "Severe", "severe" %></th>
+        <th class="px-4 py-2"><%= sortable_header "Moderate", "moderate" %></th>
       </tr>
     </thead>
     <tbody>

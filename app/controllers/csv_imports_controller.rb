@@ -14,7 +14,7 @@ class CsvImportsController < ApplicationController
     if result.errors.any?
       redirect_to csv_imports_path, alert: "Import failed: #{result.errors.first}"
     else
-      redirect_to csv_imports_path, notice: "Imported #{result.rows_processed} rows from #{result.csv_import.filename}."
+      redirect_to csv_imports_path, notice: "Imported #{result.rows_processed} rows from #{result.csv_import.filename} (#{result.closed_count} finding(s) closed as remediated)."
     end
   end
 end

@@ -4,11 +4,11 @@
   <table class="min-w-full text-sm bg-white shadow rounded">
     <thead class="bg-gray-100 text-left">
       <tr>
-        <th class="px-4 py-2">Title</th>
-        <th class="px-4 py-2">Severity</th>
-        <th class="px-4 py-2">CVSS</th>
-        <th class="px-4 py-2">Has exploits</th>
-        <th class="px-4 py-2">Affected assets</th>
+        <th class="px-4 py-2"><%= sortable_header "Title", "title" %></th>
+        <th class="px-4 py-2"><%= sortable_header "Severity", "severity" %></th>
+        <th class="px-4 py-2"><%= sortable_header "CVSS", "cvss" %></th>
+        <th class="px-4 py-2"><%= sortable_header "Has exploits", "has_exploits" %></th>
+        <th class="px-4 py-2"><%= sortable_header "Affected assets", "affected_assets" %></th>
       </tr>
     </thead>
     <tbody>
@@ -18,7 +18,7 @@
           <td class="px-4 py-2"><%= vulnerability.severity %></td>
           <td class="px-4 py-2"><%= vulnerability.cvss_score %></td>
           <td class="px-4 py-2"><%= vulnerability.has_exploits ? "Yes" : "No" %></td>
-          <td class="px-4 py-2"><%= vulnerability.findings.count %></td>
+          <td class="px-4 py-2"><%= vulnerability.findings_count %></td>
         </tr>
       <% end %>
     </tbody>

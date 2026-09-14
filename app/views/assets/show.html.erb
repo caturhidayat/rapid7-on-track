@@ -10,6 +10,7 @@
         <th class="px-4 py-2">CVSS</th>
         <th class="px-4 py-2">Due date</th>
         <th class="px-4 py-2">Past due</th>
+        <th class="px-4 py-2">Status</th>
       </tr>
     </thead>
     <tbody>
@@ -20,6 +21,7 @@
           <td class="px-4 py-2"><%= finding.vulnerability.cvss_score %></td>
           <td class="px-4 py-2"><%= finding.due_date&.to_date %></td>
           <td class="px-4 py-2"><%= finding.past_due ? "Yes" : "No" %></td>
+          <td class="px-4 py-2"><%= render "findings/status_badge", finding: finding %></td>
         </tr>
       <% end %>
     </tbody>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_14_135708) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_14_145325) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -53,6 +53,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_135708) do
 
   create_table "findings", force: :cascade do |t|
     t.bigint "asset_id", null: false
+    t.datetime "closed_at"
     t.datetime "created_at", null: false
     t.bigint "csv_import_id", null: false
     t.datetime "date_added"
@@ -65,11 +66,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_135708) do
     t.integer "instance_count"
     t.boolean "past_due"
     t.datetime "reintroduced"
+    t.string "status", default: "open", null: false
     t.datetime "updated_at", null: false
     t.bigint "vulnerability_id", null: false
     t.index ["asset_id", "vulnerability_id"], name: "index_findings_on_asset_id_and_vulnerability_id", unique: true
     t.index ["asset_id"], name: "index_findings_on_asset_id"
     t.index ["csv_import_id"], name: "index_findings_on_csv_import_id"
+    t.index ["status"], name: "index_findings_on_status"
     t.index ["vulnerability_id"], name: "index_findings_on_vulnerability_id"
   end
 

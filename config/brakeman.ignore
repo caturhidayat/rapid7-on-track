@@ -1,0 +1,29 @@
+{
+  "ignored_warnings": [
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "11c4e4d71e315b07c77431342f5fb8dfd55af223b7410d1f178046fab44f35ab",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/controllers/concerns/sortable.rb",
+      "line": 28,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "Arel.sql(\"#{self.class::SORTABLE_COLUMNS.fetch(sort_column)} #{sort_direction}\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Sortable",
+        "method": "sort_order"
+      },
+      "user_input": "self.class::SORTABLE_COLUMNS.fetch(sort_column)",
+      "confidence": "Medium",
+      "cwe_id": [
+        89
+      ],
+      "note": "False positive: sort_column is validated against SORTABLE_COLUMNS.key? in Sortable#sort_column before this lookup, and .fetch only ever returns one of the hardcoded values in each controller's SORTABLE_COLUMNS constant. sort_direction is restricted to the literal strings \"asc\"/\"desc\" by a ternary. Neither interpolated value is ever raw user input."
+    }
+  ],
+  "updated": "2026-09-14 21:56:00 +0700",
+  "brakeman_version": "8.0.6"
+}
