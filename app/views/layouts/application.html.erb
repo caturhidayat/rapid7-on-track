@@ -32,6 +32,7 @@
         <%= link_to "Vulnerabilities", vulnerabilities_path, class: "hover:underline" %>
         <%= link_to "Imports", csv_imports_path, class: "hover:underline" %>
         <span class="ml-auto text-sm text-gray-300"><%= Current.user.email_address %></span>
+        <%= link_to "Change password", edit_password_setting_path, class: "text-sm hover:underline" %>
         <%= button_to "Sign out", session_path, method: :delete, class: "text-sm underline" %>
       </nav>
     <% end %>
