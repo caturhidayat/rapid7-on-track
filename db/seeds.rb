@@ -10,7 +10,7 @@
 
 # Default IT admin account for initial deploy. Only created if it doesn't exist yet,
 # so re-running seeds never resets a password the admin has already changed.
-User.find_or_create_by!(email_address: "itadmin") do |user|
+User.find_or_create_by!(email_address: "itadmin@email.com") do |user|
   user.password = "itadmin"
   user.password_confirmation = "itadmin"
 end
