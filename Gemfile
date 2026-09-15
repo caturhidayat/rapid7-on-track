@@ -64,3 +64,11 @@ end
 gem "csv", "~> 3.3"
 
 gem "json", "= 2.13.2"
+
+gem "rspec-rails", "~> 8.0", groups: [:development, :test]
+gem "factory_bot_rails", "~> 6.5", groups: [:development, :test]
+gem "shoulda-matchers", "~> 8.0", groups: [:development, :test]
+
+gem "rollbar", "~> 3.8"
+
+gem "lograge", "~> 0.15.0"

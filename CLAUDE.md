@@ -16,10 +16,11 @@ bin/dev                    # run the app (Puma + Tailwind watcher via Procfile.d
 bin/rails db:prepare       # create/migrate dev+test db
 bin/rails db:reset         # drop/recreate/migrate (destructive)
 
-bin/rubocop                # lint (rubocop-rails-omakase config)
+bin/rubocop                 # lint (rubocop-rails-omakase config)
 bin/brakeman                # static security scan
-bin/rails test              # test suite (minitest; no fixtures/tests written yet)
-bin/rails test test/models/asset_test.rb   # single test file
+bundle exec rspec           # test suite
+bundle exec rspec spec/services/rapid7_csv_importer_spec.rb   # single file
+bundle exec rspec spec/models/finding_spec.rb:12               # single example, by line
 bin/rails zeitwerk:check    # verify autoloading resolves cleanly
 
 bin/rails console
@@ -65,11 +66,31 @@ Re-uploading a CSV **upserts** rather than duplicates: `Asset`/`Vulnerability` a
 
 Generated via `bin/rails generate authentication` (Rails 8 built-in, not Devise). `Authentication` concern in `ApplicationController` requires login on every action by default; use `allow_unauthenticated_access` in a controller to opt out. `Current.user` / `Current.session` (via `app/models/current.rb`) is how controllers/views access the logged-in user — there is no `current_user` helper.
 
-The login field is `email_address` (not a real username field) but has no format validation, so the seeded default account (`db/seeds.rb`, run via `bin/rails db:seed`) logs in as `itadmin` / `itadmin`. Seeding is idempotent (`find_or_create_by!`) so it's safe to run on every deploy — it will never overwrite a password the admin has since changed.
+The login field is `email_address` (not a real username field) but has no format validation, so the seeded default account (`db/seeds.rb`, run via `bin/rails db:seed`) logs in as `itadmin@email.com` / `itadmin`. Seeding is idempotent (`find_or_create_by!`) so it's safe to run on every deploy — it will never overwrite a password the admin has since changed.
 
 There are two separate password-change paths, don't conflate them:
 - `PasswordsController` (`/passwords`) — the *forgot password* flow: emails a signed reset token via `PasswordsMailer`. Requires working mail delivery to be useful.
 - `PasswordSettingsController` (`/password_setting`) — a self-service *change password while logged in* page (current password + new password, no email involved). This is what the seeded `itadmin` account is expected to use, since its "email" isn't deliverable.
+
+### Testing
+
+RSpec (not Minitest — `config/application.rb` sets `config.generators.test_framework :rspec`, and `require "rails/test_unit/railtie"` is commented out in `config/application.rb`, so `rails generate` produces spec files). FactoryBot factories live in `spec/factories/`; `shoulda-matchers` is configured in `spec/rails_helper.rb` for terse validation/association specs.
+
+Coverage is intentionally scoped to models (`spec/models/`) and the one piece of real business logic, the importer (`spec/services/rapid7_csv_importer_spec.rb`, using fixture CSVs under `spec/fixtures/files/` to exercise the open → close → reopen reconciliation across sequential imports). No request/controller/system specs yet — add them the same way if that coverage becomes worth it.
+
+### Error tracking (Rollbar)
+
+`config/initializers/rollbar.rb` reads `ROLLBAR_ACCESS_TOKEN` from ENV (see `.env.example`) and is a no-op — `config.enabled = false` — whenever that's unset, including in `test`. No token is checked into the repo; set the real one in each deploy target's own secret store.
+
+`ApplicationController#rollbar_person` (private) points Rollbar's `person_method` at `Current.user` so reported errors show which user hit them — this app uses `Current.user`, not a `current_user` method, so that indirection is required. A few expected exceptions (`ActiveRecord::RecordNotFound`, `ActionController::RoutingError`, `ActionController::InvalidAuthenticityToken`) are downgraded to `"warning"` via `exception_level_filters` so they don't page as errors.
+
+### Logging (Lograge)
+
+`config/initializers/lograge.rb` replaces Rails' multi-line per-request log output with one structured JSON line per request (`Lograge::Formatters::Json`) — but **only in production** (`config.lograge.enabled = Rails.env.production?`); development keeps Rails' normal verbose/human-readable logging, which is more useful when working locally.
+
+The JSON line includes `request_id` and `remote_ip` (pulled from `event.payload[:headers]`, the standard Lograge idiom — not literal request headers, `ActionDispatch::Http::Headers` also exposes Rack env keys like `action_dispatch.request_id`) plus `user_id`, added via `ApplicationController#append_info_to_payload` reading `Current.user&.id`. `params` are included but `password`/`password_confirmation`/`current_password`/`authenticity_token`/`controller`/`action` are stripped — on top of that, Rails' own `config.filter_parameters` (in `config/initializers/filter_parameter_logging.rb`) separately masks anything matching `:email`, `:passw`, etc. wherever params get logged, lograge included.
+
+If you need to see the JSON format without a full production boot, temporarily force it on, e.g. `Rails.application.config.lograge.enabled = true` in a `bin/rails runner` script run *before* anything logs (Lograge wires itself to the log subscribers at boot, so toggling it after `Rails.application.initialize!` has already run has no effect) — don't leave a bypass like this checked in.
 
 ### Gemfile pins worth knowing about
 
