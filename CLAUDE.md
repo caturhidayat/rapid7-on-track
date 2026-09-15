@@ -80,9 +80,11 @@ Coverage is intentionally scoped to models (`spec/models/`) and the one piece of
 
 ### Error tracking (Rollbar)
 
-`config/initializers/rollbar.rb` reads `ROLLBAR_ACCESS_TOKEN` from ENV (see `.env.example`) and is a no-op — `config.enabled = false` — whenever that's unset, including in `test`. No token is checked into the repo; set the real one in each deploy target's own secret store.
+`config/initializers/rollbar.rb` reads `ROLLBAR_ACCESS_TOKEN` (and optionally `ROLLBAR_ENVIRONMENT`, `GIT_SHA`) from ENV — see `.env.example`. `dotenv` is in the Gemfile for `:development, :test` so a local `.env` loads automatically; no token is checked into the repo. `config.enabled` is explicitly forced `false` in `test` even if a token happens to be loaded, so running the spec suite never sends real errors to the dashboard.
 
-`ApplicationController#rollbar_person` (private) points Rollbar's `person_method` at `Current.user` so reported errors show which user hit them — this app uses `Current.user`, not a `current_user` method, so that indirection is required. A few expected exceptions (`ActiveRecord::RecordNotFound`, `ActionController::RoutingError`, `ActionController::InvalidAuthenticityToken`) are downgraded to `"warning"` via `exception_level_filters` so they don't page as errors.
+`ApplicationController#rollbar_person` (private) points Rollbar's `person_method` at `Current.user` so reported errors show which user hit them — this app uses `Current.user`, not a `current_user` method, so that indirection is required. `ActionController::RoutingError` is downgraded to `"ignore"` via `exception_level_filters` (404s from bots/scanners shouldn't page anyone).
+
+`GET /rollbar/test` (routed only when `Rails.env.development?`, see `config/routes.rb`) deliberately raises in `RollbarController#test` — hit it locally to confirm delivery end-to-end, then check the Rollbar dashboard (the response is a normal Rails 500 error page; that's expected).
 
 ### Logging (Lograge)
 

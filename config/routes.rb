@@ -17,6 +17,8 @@ Rails.application.routes.draw do
   resources :assets, only: [ :index, :show ], path: "inventory"
   resources :vulnerabilities, only: [ :index, :show ]
 
+  get "rollbar/test" => "rollbar#test" if Rails.env.development?
+
   # Defines the root path route ("/")
   root "findings#index"
 end

@@ -415,6 +415,7 @@ DEPENDENCIES
   bundler-audit
   csv (~> 3.3)
   debug
+  dotenv
   factory_bot_rails (~> 6.5)
   image_processing (~> 1.2)
   importmap-rails

@@ -1,21 +1,28 @@
 Rollbar.configure do |config|
   config.access_token = ENV["ROLLBAR_ACCESS_TOKEN"]
 
-  # Only report when a token is actually configured, and never from the test suite.
-  config.enabled = ENV["ROLLBAR_ACCESS_TOKEN"].present? && !Rails.env.test?
+  # Never report from the test suite, even if a real token is loaded via
+  # dotenv (it's configured for the :test group too) -- specs shouldn't
+  # send real errors to the dashboard.
+  config.enabled = !Rails.env.test?
 
-  config.environment = ENV.fetch("ROLLBAR_ENVIRONMENT", Rails.env)
+  # Set environment from Rails
+  config.environment = ENV["ROLLBAR_ENVIRONMENT"].presence || Rails.env
 
-  # Attach the current user to reported errors via Current.user (this app doesn't
-  # define a `current_user` controller method, so point Rollbar at Current.user).
+  # Optional: Set code version
+  config.code_version = ENV["GIT_SHA"]
+
+  # Attach the current user to reported errors via ApplicationController#rollbar_person
+  # (this app uses Current.user, not a current_user method).
   config.person_method = "rollbar_person"
   config.person_id_method = "id"
   config.person_email_method = "email_address"
 
-  # Expected/handled exceptions that don't need to page anyone.
+  # Add exception exclusions
   config.exception_level_filters.merge!(
-    "ActiveRecord::RecordNotFound" => "warning",
-    "ActionController::RoutingError" => "warning",
-    "ActionController::InvalidAuthenticityToken" => "warning"
+    "ActionController::RoutingError" => "ignore"
   )
+
+  # Enable async reporting (optional, recommended)
+  # config.use_async = true
 end
