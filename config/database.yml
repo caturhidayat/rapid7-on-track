@@ -84,21 +84,24 @@ test:
 # Read https://guides.rubyonrails.org/configuring.html#configuring-a-database
 # for a full overview on how database connection configuration can be specified.
 #
+# Four separate logical databases (Rails 8's generated default for Solid
+# Cache/Queue/Cable), each driven entirely by its own *_DATABASE_URL env var
+# instead of a hardcoded username + a password-only env var -- set these in
+# Dokploy's environment panel (or a local .env for dev), not committed here.
+# See CLAUDE.md for why these stayed 4 separate databases rather than 1.
 production:
   primary: &primary_production
     <<: *default
-    database: rapid7_on_track_production
-    username: rapid7_on_track
-    password: <%= ENV["RAPID7_ON_TRACK_DATABASE_PASSWORD"] %>
+    url: <%= ENV["DATABASE_URL"] %>
   cache:
-    <<: *primary_production
-    database: rapid7_on_track_production_cache
+    <<: *default
+    url: <%= ENV["CACHE_DATABASE_URL"] %>
     migrations_paths: db/cache_migrate
   queue:
-    <<: *primary_production
-    database: rapid7_on_track_production_queue
+    <<: *default
+    url: <%= ENV["QUEUE_DATABASE_URL"] %>
     migrations_paths: db/queue_migrate
   cable:
-    <<: *primary_production
-    database: rapid7_on_track_production_cable
+    <<: *default
+    url: <%= ENV["CABLE_DATABASE_URL"] %>
     migrations_paths: db/cable_migrate

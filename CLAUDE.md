@@ -94,6 +94,16 @@ The JSON line includes `request_id` and `remote_ip` (pulled from `event.payload[
 
 If you need to see the JSON format without a full production boot, temporarily force it on, e.g. `Rails.application.config.lograge.enabled = true` in a `bin/rails runner` script run *before* anything logs (Lograge wires itself to the log subscribers at boot, so toggling it after `Rails.application.initialize!` has already run has no effect) — don't leave a bypass like this checked in.
 
+### Database & deployment (Dokploy)
+
+Production is 4 separate Postgres databases (Rails 8's generated default for Solid Cache/Queue/Cable) driven entirely by env vars in `config/database.yml`: `DATABASE_URL`, `CACHE_DATABASE_URL`, `QUEUE_DATABASE_URL`, `CABLE_DATABASE_URL` (see `.env.example`). These are set in Dokploy's own Environment Variables panel, not a committed file — `dotenv` (in the Gemfile) is scoped to `:development, :test` only, so a `.env` file is never read in production.
+
+**Do not consolidate these into one database by pointing all 4 URLs at the same connection string** — that was tried and doesn't work: `ActiveRecord::Tasks::DatabaseTasks#initialize_database` decides whether to load a database's schema by checking if its `schema_migrations` table already exists, and since all 4 configs would share one physical table, only the first one processed (`primary`) actually gets initialized — `solid_cache_entries`, `solid_queue_*`, and `solid_cable_messages` silently never get created. A true single-database setup requires converting Solid Cache/Queue/Cable's schema-dump-based install (`db/cache_schema.rb` etc., no ordinary migration files) into real migrations merged into the primary `db/schema.rb`, which wasn't judged worth the invasiveness — 4 databases was kept instead.
+
+Also required in Dokploy's env panel: `RAILS_MASTER_KEY` (`config/master.key` is gitignored, so a fresh clone/deploy has no other way to decrypt `config/credentials.yml.enc`) and, optionally, `ROLLBAR_ACCESS_TOKEN`/`ROLLBAR_ENVIRONMENT` (see Error tracking above).
+
+Releases are tagged with semver (`v0.1.0` is the first tag) for Dokploy's tag-based deploys.
+
 ### Gemfile pins worth knowing about
 
 - `json` is pinned to `2.13.2`. The `json` gem's newer major line (3.x, which Bundler resolves to by default) changed `JSON.parse`'s arity and breaks `ActiveSupport::Messages::Metadata` (used for signed cookies/sessions) on this Rails version — every authenticated request 500s otherwise. Don't let `bundle update` drift this off 2.x without retesting login.
