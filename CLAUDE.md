@@ -102,7 +102,9 @@ Production is 4 separate Postgres databases (Rails 8's generated default for Sol
 
 Also required in Dokploy's env panel: `RAILS_MASTER_KEY` (`config/master.key` is gitignored, so a fresh clone/deploy has no other way to decrypt `config/credentials.yml.enc`) and, optionally, `ROLLBAR_ACCESS_TOKEN`/`ROLLBAR_ENVIRONMENT` (see Error tracking above).
 
-Releases are tagged with semver (`v0.1.0` is the first tag) for Dokploy's tag-based deploys.
+**`config.assume_ssl` / `config.force_ssl` are enabled in `config/environments/production.rb`** (uncommented from Rails' own defaults) because Dokploy's Traefik proxy terminates TLS and forwards to the container over plain HTTP. Without `assume_ssl`, Rails thinks every request is plain HTTP, so `request.base_url` is `http://...` while the browser's `Origin` header (reflecting the real, HTTPS, public URL) is `https://...` — that mismatch fails Rails' CSRF Origin check on every form submit (`ActionController::InvalidAuthenticityToken`), including login, with no visible error to the user beyond "nothing happens" (check Rollbar / container logs to see it). `/up` is excluded from the resulting HTTPS redirect via `config.ssl_options` so Dokploy's own health check (likely plain HTTP) still passes.
+
+Releases are tagged with semver (`v0.1.0` initial, `v0.1.1` fixed the DB env vars) for Dokploy's tag-based deploys.
 
 ### Gemfile pins worth knowing about
 
