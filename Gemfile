@@ -73,4 +73,4 @@ gem "shoulda-matchers", "~> 8.0", groups: [:development, :test]
 
 gem "rollbar", "~> 3.8"
 
-gem "lograge", "~> 0.15.0"
+gem "lograge", "~> 0.15.1"
